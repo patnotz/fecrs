@@ -39,8 +39,10 @@ SET(FECRS_LIBRARIES
     stk_util_env
     stk_util_parallel
     stk_util_util
+    teuchos
+    epetra
     shards
-    curl hdf5 hdf5_hl exodus netcdf z
+    curl hdf5 hdf5_hl exodus netcdf z blas
 )
 
 target_link_libraries(fecrs ${FECRS_LIBRARIES} ${Boost_LIBRARIES}) 
