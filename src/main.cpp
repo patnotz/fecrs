@@ -1,36 +1,41 @@
 #include <iostream>
 #include <fstream>
+
 #include <boost/program_options.hpp>
+
 #include <stk_util/parallel/Parallel.hpp>
+
 #include <Epetra_MpiComm.h>
 #include <Epetra_Map.h>
 #include <Epetra_FECrsGraph.h>
 #include <Epetra_FECrsMatrix.h>
+
 #include <Teuchos_RCP.hpp>
-#include <Teuchos_GlobalMPISession.hpp>
-#include <Teuchos_oblackholestream.hpp>
+#include <Teuchos_ParameterList.hpp>
+#include <Teuchos_StandardParameterEntryValidators.hpp>
+
+#include <Tpetra_Map.hpp>
+#include <Tpetra_CrsGraph.hpp>
+#include <Tpetra_CrsMatrix.hpp>
+
 #include <typeinfo.hpp>
 
 using namespace Teuchos;
 namespace po = boost::program_options;
 
-typedef int IdType;
-
 struct MeshInfo {
-  IdType num_global_nodes;
+  OrdinalT num_global_nodes;
   int num_dofs_per_node;
-  IdType num_global_rows;
+  OrdinalT num_global_rows;
 
-  IdType node_begin;
-  IdType node_end;
+  OrdinalT node_begin;
+  OrdinalT node_end;
 };
 
 void try_e_fecrs(MPI_Comm & Comm, const MeshInfo & meshInfo);
 void try_t_fecrs(MPI_Comm & Comm, const MeshInfo & meshInfo);
 
 int main(int argc, char * argv[]) {
-  Teuchos::oblackholestream blackhole;
-  Teuchos::GlobalMPISession mpiSession(&argc,&argv,&blackhole);
 
   // Declare the supported options.
   po::options_description desc("Allowed options");
@@ -64,16 +69,129 @@ int main(int argc, char * argv[]) {
       << meshInfo.node_begin << "," << meshInfo.node_end << ")" << std::endl;
 
   try_e_fecrs(pMachine, meshInfo);
+  try_t_fecrs(pMachine, meshInfo);
 
   stk::parallel_machine_finalize();
 }
 
+void build_epetra_graph(RCP<Epetra_FECrsGraph> graph, const MeshInfo & mi) {
+  for (OrdinalT row_node = mi.node_begin; row_node < mi.node_end; ++row_node) {
+    OrdinalT row_offset = row_node * mi.num_dofs_per_node;
+    for (int row_dof = 0; row_dof < mi.num_dofs_per_node; ++row_dof) {
+      const OrdinalT gRowId = row_offset + row_dof;
+      for (int col_dof = 0; col_dof < mi.num_dofs_per_node; ++col_dof) {
+        OrdinalT col_node = -1;
+        OrdinalT gColId = -1;
+        switch (row_node) {
+        case 0:
+        case 3:
+          col_node = 0;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          col_node = 1;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          col_node = 2;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          col_node = 3;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          break;
+        case 1:
+        case 2:
+          col_node = 0;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          col_node = 1;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          col_node = 2;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          col_node = 3;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          col_node = 4;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          col_node = 5;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          break;
+        case 4:
+        case 5:
+          col_node = 1;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          col_node = 2;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          col_node = 4;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          col_node = 5;
+          gColId = col_node * mi.num_dofs_per_node + col_dof;
+          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          break;
+        default:
+          throw "oops";
+        }
+      }
+    }
+  }
+  graph->GlobalAssemble();
+  graph->OptimizeStorage();
+}
+
+void build_tpetra_graph(RCP<GraphT> graph, const MeshInfo & mi) {
+  int nDof = mi.num_dofs_per_node;
+  for (OrdinalT row_node = mi.node_begin; row_node < mi.node_end; ++row_node) {
+    OrdinalT row_offset = row_node * mi.num_dofs_per_node;
+    for (int row_dof = 0; row_dof < mi.num_dofs_per_node; ++row_dof) {
+      const OrdinalT gRowId = row_offset + row_dof;
+      Array<OrdinalT> gCols;
+      for (int col_dof = 0; col_dof < mi.num_dofs_per_node; ++col_dof) {
+        switch (row_node) {
+        case 0:
+        case 3:
+          gCols.push_back(0 * nDof + col_dof);
+          gCols.push_back(1 * nDof + col_dof);
+          gCols.push_back(2 * nDof + col_dof);
+          gCols.push_back(3 * nDof + col_dof);
+          break;
+        case 1:
+        case 2:
+          gCols.push_back(0 * nDof + col_dof);
+          gCols.push_back(1 * nDof + col_dof);
+          gCols.push_back(2 * nDof + col_dof);
+          gCols.push_back(3 * nDof + col_dof);
+          gCols.push_back(4 * nDof + col_dof);
+          gCols.push_back(5 * nDof + col_dof);
+          break;
+        case 4:
+        case 5:
+          gCols.push_back(1 * nDof + col_dof);
+          gCols.push_back(2 * nDof + col_dof);
+          gCols.push_back(4 * nDof + col_dof);
+          gCols.push_back(5 * nDof + col_dof);
+          break;
+        default:
+          throw "oops";
+        }
+      }
+      graph->insertGlobalIndices(gRowId, gCols);
+    }
+  }
+  graph->fillComplete();
+}
+
 void try_e_fecrs(MPI_Comm & mpiComm, const MeshInfo & mi) {
   Epetra_MpiComm epetra_mpicomm = mpiComm;
-  std::vector<IdType> locally_owned_row_ids;
-  for (IdType nid = mi.node_begin; nid < mi.node_end; ++nid)
+  std::vector<OrdinalT> locally_owned_row_ids;
+  for (OrdinalT nid = mi.node_begin; nid < mi.node_end; ++nid)
     for (int dof = 0; dof < mi.num_dofs_per_node; ++dof) {
-      IdType gid = nid * mi.num_dofs_per_node + dof;
+      OrdinalT gid = nid * mi.num_dofs_per_node + dof;
       locally_owned_row_ids.push_back(gid);
     }
 
@@ -83,76 +201,12 @@ void try_e_fecrs(MPI_Comm & mpiComm, const MeshInfo & mi) {
           epetra_mpicomm));
   std::cout << "row_map = " << *row_map << std::endl;
 
-  const IdType approx_cols_per_row = 0;
+  const OrdinalT approx_cols_per_row = 0;
   RCP<Epetra_FECrsGraph> fecrs_graph = rcp(
       new Epetra_FECrsGraph(::Copy, *row_map, approx_cols_per_row));
-  for (IdType row_node = mi.node_begin; row_node < mi.node_end; ++row_node) {
-    IdType row_offset = row_node * mi.num_dofs_per_node;
-    for (int row_dof = 0; row_dof < mi.num_dofs_per_node; ++row_dof) {
-      const IdType gRowId = row_offset + row_dof;
-      for (int col_dof = 0; col_dof < mi.num_dofs_per_node; ++col_dof) {
-        IdType col_node = -1;
-        IdType gColId = -1;
-        switch (row_node) {
-        case 0:
-        case 3:
-          col_node = 0;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 1;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 2;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 3;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          break;
-        case 1:
-        case 2:
-          col_node = 0;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 1;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 2;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 3;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 4;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 5;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          break;
-        case 4:
-        case 5:
-          col_node = 1;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 2;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 4;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 5;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          fecrs_graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          break;
-        default:
-          throw "oops";
-        }
-      }
-    }
-  }
-  fecrs_graph->GlobalAssemble();
-  fecrs_graph->OptimizeStorage();
+
+  build_epetra_graph(fecrs_graph, mi);
+
   std::cout << "fecrs_graph = " << *fecrs_graph << std::endl;
 
   RCP<Epetra_FECrsMatrix> fecrs_matrix = rcp(
@@ -167,9 +221,21 @@ void try_t_fecrs(MPI_Comm & mpiComm, const MeshInfo & mi) {
   //
   // Get the default communicator and node
   //
-  Platform &platform = Tpetra::DefaultPlatform::getDefaultPlatform();
-  Teuchos::RCP<const Teuchos::Comm<int> > comm = platform.getComm();
-  Teuchos::RCP<Node>             node = platform.getNode();
+  ParameterList nodePList;
+  nodePList.set<int>("Num Threads", 2, "Number of threads to use.");
+  RCP<KNodeT> knode = rcp(new KNodeT(nodePList));
+  RCP<PlatformT> platform = rcp(new PlatformT(knode));
+  RCP<CommT> comm = platform->getComm();
   const int myRank = comm->getRank();
   std::cout << "myRank = " << myRank << std::endl;
+
+  RCP<const MapT> map = Tpetra::createUniformContigMapWithNode<OrdinalT,OrdinalT,KNodeT>(
+      mi.num_global_rows, comm, knode);
+
+  RCP<GraphT> graph = rcp(new GraphT(map,0));
+  build_tpetra_graph(graph, mi);
+  RCP<MatrixT> matrix = rcp(new MatrixT(graph));
+  matrix->setAllToScalar(0.0);
+  matrix->fillComplete();
+  std::cout << "Tpetra Matrix = " << *matrix << std::endl;
 }

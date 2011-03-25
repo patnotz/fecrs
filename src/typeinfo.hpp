@@ -9,15 +9,24 @@
 
 #include <Teuchos_ScalarTraits.hpp>
 #include <Tpetra_DefaultPlatform.hpp>
+#include <Tpetra_SerialPlatform.hpp>
+#include <Tpetra_MpiPlatform.hpp>
 
-//
-// Specify types used in this example
-//
-typedef double Scalar;
-typedef Teuchos::ScalarTraits<Scalar>::magnitudeType Magnitude;
-typedef int Ordinal;
-typedef Tpetra::DefaultPlatform::DefaultPlatformType Platform;
-typedef Tpetra::DefaultPlatform::DefaultPlatformType::NodeType Node;
+#include <Kokkos_SerialNode.hpp>
+#include <Kokkos_TBBNode.hpp>
+
 using Tpetra::global_size_t;
+typedef int OrdinalT;
+typedef double ScalarT;
+
+typedef Teuchos::ScalarTraits<ScalarT>::magnitudeType MagnitudeT;
+typedef Kokkos::TBBNode KNodeT;
+//typedef Kokkos::SerialNode KNodeT;
+typedef Tpetra::MpiPlatform<KNodeT> PlatformT;
+
+typedef const Teuchos::Comm<int> CommT;
+typedef Tpetra::Map<OrdinalT, OrdinalT, KNodeT> MapT;
+typedef Tpetra::CrsGraph<OrdinalT, OrdinalT, KNodeT> GraphT;
+typedef Tpetra::CrsMatrix<ScalarT, OrdinalT, OrdinalT, KNodeT> MatrixT;
 
 #endif /* TYPEINFO_HPP_ */

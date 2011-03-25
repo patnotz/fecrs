@@ -31,6 +31,7 @@ MESSAGE("End of Trilinos details\n")
 SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
 SET(CMAKE_C_COMPILER ${Trilinos_C_COMPILER} )
 
+#add_definitions("-g -O2 -std=c++0x")
 add_definitions("-g -O2")
 
 # End of setup and error checking

@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 2.8)
 
 
 SET(SOURCES
-	main.cpp
   )
 
 SET(HEADERS
@@ -22,7 +21,7 @@ link_directories (
     ${Trilinos_TPL_LIBRARY_DIRS} 
 )
 
-add_library(fecrsLib ${SOURCES} ${HEADERS})
+#add_library(fecrsLib ${SOURCES} ${HEADERS})
 
 find_package(Boost 1.46.0 COMPONENTS program_options REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -32,7 +31,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 add_executable(fecrs main.cpp)
 
 SET(FECRS_LIBRARIES
-    fecrsLib
+    #fecrsLib
     stk_io
     stk_mesh_base
     stk_mesh_fem
