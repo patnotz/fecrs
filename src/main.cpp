@@ -7,6 +7,9 @@
 #include <Epetra_FECrsGraph.h>
 #include <Epetra_FECrsMatrix.h>
 #include <Teuchos_RCP.hpp>
+#include <Teuchos_GlobalMPISession.hpp>
+#include <Teuchos_oblackholestream.hpp>
+#include <typeinfo.hpp>
 
 using namespace Teuchos;
 namespace po = boost::program_options;
@@ -22,9 +25,13 @@ struct MeshInfo {
   IdType node_end;
 };
 
-void try_fecrs(Epetra_MpiComm & mpiComm, const MeshInfo & meshInfo);
+void try_e_fecrs(MPI_Comm & Comm, const MeshInfo & meshInfo);
+void try_t_fecrs(MPI_Comm & Comm, const MeshInfo & meshInfo);
 
 int main(int argc, char * argv[]) {
+  Teuchos::oblackholestream blackhole;
+  Teuchos::GlobalMPISession mpiSession(&argc,&argv,&blackhole);
+
   // Declare the supported options.
   po::options_description desc("Allowed options");
   desc.add_options()("help,h", "produce help message");
@@ -56,14 +63,13 @@ int main(int argc, char * argv[]) {
   std::cout << "Hello from rank " << pRank << " of " << pSize << " and nodes ["
       << meshInfo.node_begin << "," << meshInfo.node_end << ")" << std::endl;
 
-  Epetra_MpiComm mpiComm = pMachine;
-  try_fecrs(mpiComm, meshInfo);
+  try_e_fecrs(pMachine, meshInfo);
 
   stk::parallel_machine_finalize();
 }
 
-void try_fecrs(Epetra_MpiComm & mpiComm, const MeshInfo & mi) {
-
+void try_e_fecrs(MPI_Comm & mpiComm, const MeshInfo & mi) {
+  Epetra_MpiComm epetra_mpicomm = mpiComm;
   std::vector<IdType> locally_owned_row_ids;
   for (IdType nid = mi.node_begin; nid < mi.node_end; ++nid)
     for (int dof = 0; dof < mi.num_dofs_per_node; ++dof) {
@@ -74,7 +80,7 @@ void try_fecrs(Epetra_MpiComm & mpiComm, const MeshInfo & mi) {
   RCP<Epetra_Map> row_map = rcp(
       new Epetra_Map(mi.num_global_rows, locally_owned_row_ids.size(),
           &locally_owned_row_ids[0], 0, // 0-basded counting for local row ids
-          mpiComm));
+          epetra_mpicomm));
   std::cout << "row_map = " << *row_map << std::endl;
 
   const IdType approx_cols_per_row = 0;
@@ -155,4 +161,15 @@ void try_fecrs(Epetra_MpiComm & mpiComm, const MeshInfo & mi) {
   fecrs_matrix->PutScalar(0);
 
   std::cout << "fecrs_matrix = " << *fecrs_matrix << std::endl;
+}
+
+void try_t_fecrs(MPI_Comm & mpiComm, const MeshInfo & mi) {
+  //
+  // Get the default communicator and node
+  //
+  Platform &platform = Tpetra::DefaultPlatform::getDefaultPlatform();
+  Teuchos::RCP<const Teuchos::Comm<int> > comm = platform.getComm();
+  Teuchos::RCP<Node>             node = platform.getNode();
+  const int myRank = comm->getRank();
+  std::cout << "myRank = " << myRank << std::endl;
 }

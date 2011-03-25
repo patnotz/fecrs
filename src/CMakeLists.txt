@@ -6,14 +6,15 @@ SET(SOURCES
   )
 
 SET(HEADERS
+    typeinfo.hpp
   )
 
 set(FECRS_TRILINOS_LIBS ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 
 include_directories (
     ${Trilinos_INCLUDE_DIRS}
-    .
     ${Trilinos_TPL_INCLUDE_DIRS}
+    .
 )
 
 link_directories (
@@ -42,6 +43,7 @@ SET(FECRS_LIBRARIES
     teuchos
     epetra
     shards
+    tpetra
     curl hdf5 hdf5_hl exodus netcdf z blas
 )
 
