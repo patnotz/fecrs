@@ -236,6 +236,13 @@ void try_t_fecrs(MPI_Comm & mpiComm, const MeshInfo & mi) {
   build_tpetra_graph(graph, mi);
   RCP<MatrixT> matrix = rcp(new MatrixT(graph));
   matrix->setAllToScalar(0.0);
+  Array<OrdinalT> gCols(1);
+  Array<ScalarT> vals(1);
+  vals[0] = 1;
+  for(OrdinalT gRow=0; gRow < mi.num_global_rows; ++gRow) {
+    gCols[0] = gRow;
+    matrix->sumIntoGlobalValues(gRow,gCols,vals);
+  }
   matrix->fillComplete();
   std::cout << "Tpetra Matrix = " << *matrix << std::endl;
 }
