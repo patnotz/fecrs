@@ -74,70 +74,53 @@ int main(int argc, char * argv[]) {
   stk::parallel_machine_finalize();
 }
 
+/* 2-quad element mesh with the following node numbers:
+ *
+ *   5-----4
+ *   |     |
+ *   |     |
+ *   2-----1
+ *   |     |
+ *   |     |
+ *   3-----0
+ */
 void build_epetra_graph(RCP<Epetra_FECrsGraph> graph, const MeshInfo & mi) {
+  int nDof = mi.num_dofs_per_node;
   for (OrdinalT row_node = mi.node_begin; row_node < mi.node_end; ++row_node) {
     OrdinalT row_offset = row_node * mi.num_dofs_per_node;
     for (int row_dof = 0; row_dof < mi.num_dofs_per_node; ++row_dof) {
       const OrdinalT gRowId = row_offset + row_dof;
+      std::vector<OrdinalT> gCols;
       for (int col_dof = 0; col_dof < mi.num_dofs_per_node; ++col_dof) {
-        OrdinalT col_node = -1;
-        OrdinalT gColId = -1;
         switch (row_node) {
         case 0:
         case 3:
-          col_node = 0;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 1;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 2;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 3;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          gCols.push_back( 0 * nDof + col_dof );
+          gCols.push_back( 1 * nDof + col_dof );
+          gCols.push_back( 2 * nDof + col_dof );
+          gCols.push_back( 3 * nDof + col_dof );
           break;
         case 1:
         case 2:
-          col_node = 0;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 1;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 2;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 3;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 4;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 5;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          gCols.push_back( 0 * nDof + col_dof );
+          gCols.push_back( 1 * nDof + col_dof );
+          gCols.push_back( 2 * nDof + col_dof );
+          gCols.push_back( 3 * nDof + col_dof );
+          gCols.push_back( 4 * nDof + col_dof );
+          gCols.push_back( 5 * nDof + col_dof );
           break;
         case 4:
         case 5:
-          col_node = 1;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 2;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 4;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
-          col_node = 5;
-          gColId = col_node * mi.num_dofs_per_node + col_dof;
-          graph->InsertGlobalIndices(1, &gRowId, 1, &gColId);
+          gCols.push_back( 1 * nDof + col_dof );
+          gCols.push_back( 2 * nDof + col_dof );
+          gCols.push_back( 4 * nDof + col_dof );
+          gCols.push_back( 5 * nDof + col_dof );
           break;
         default:
           throw "oops";
         }
       }
+      graph->InsertGlobalIndices(1, &gRowId, gCols.size(), &gCols[0]);
     }
   }
   graph->GlobalAssemble();
