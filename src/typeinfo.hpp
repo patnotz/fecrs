@@ -17,6 +17,8 @@
 
 using Tpetra::global_size_t;
 typedef int OrdinalT;
+typedef OrdinalT LocalOrdinalT;
+typedef OrdinalT GlobalOrdinalT;
 typedef double ScalarT;
 
 typedef Teuchos::ScalarTraits<ScalarT>::magnitudeType MagnitudeT;
@@ -25,8 +27,8 @@ typedef Kokkos::TBBNode KNodeT;
 typedef Tpetra::MpiPlatform<KNodeT> PlatformT;
 
 typedef const Teuchos::Comm<int> CommT;
-typedef Tpetra::Map<OrdinalT, OrdinalT, KNodeT> MapT;
-typedef Tpetra::CrsGraph<OrdinalT, OrdinalT, KNodeT> GraphT;
-typedef Tpetra::CrsMatrix<ScalarT, OrdinalT, OrdinalT, KNodeT> MatrixT;
+typedef Tpetra::Map<LocalOrdinalT, GlobalOrdinalT, KNodeT> MapT;
+typedef Tpetra::CrsGraph<LocalOrdinalT, GlobalOrdinalT, KNodeT> GraphT;
+typedef Tpetra::CrsMatrix<ScalarT, LocalOrdinalT, GlobalOrdinalT, KNodeT> MatrixT;
 
 #endif /* TYPEINFO_HPP_ */

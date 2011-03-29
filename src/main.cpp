@@ -129,11 +129,11 @@ void build_epetra_graph(RCP<Epetra_FECrsGraph> graph, const MeshInfo & mi) {
 
 void build_tpetra_graph(RCP<GraphT> graph, const MeshInfo & mi) {
   int nDof = mi.num_dofs_per_node;
-  for (OrdinalT row_node = mi.node_begin; row_node < mi.node_end; ++row_node) {
-    OrdinalT row_offset = row_node * mi.num_dofs_per_node;
+  for (GlobalOrdinalT row_node = mi.node_begin; row_node < mi.node_end; ++row_node) {
+    GlobalOrdinalT row_offset = row_node * mi.num_dofs_per_node;
     for (int row_dof = 0; row_dof < mi.num_dofs_per_node; ++row_dof) {
-      const OrdinalT gRowId = row_offset + row_dof;
-      Array<OrdinalT> gCols;
+      const GlobalOrdinalT gRowId = row_offset + row_dof;
+      Array<GlobalOrdinalT> gCols;
       for (int col_dof = 0; col_dof < mi.num_dofs_per_node; ++col_dof) {
         switch (row_node) {
         case 0:
@@ -212,17 +212,17 @@ void try_t_fecrs(MPI_Comm & mpiComm, const MeshInfo & mi) {
   const int myRank = comm->getRank();
   std::cout << "myRank = " << myRank << std::endl;
 
-  RCP<const MapT> map = Tpetra::createUniformContigMapWithNode<OrdinalT,OrdinalT,KNodeT>(
+  RCP<const MapT> map = Tpetra::createUniformContigMapWithNode<LocalOrdinalT,GlobalOrdinalT,KNodeT>(
       mi.num_global_rows, comm, knode);
 
   RCP<GraphT> graph = rcp(new GraphT(map,0));
   build_tpetra_graph(graph, mi);
   RCP<MatrixT> matrix = rcp(new MatrixT(graph));
   matrix->setAllToScalar(0.0);
-  Array<OrdinalT> gCols(1);
+  Array<GlobalOrdinalT> gCols(1);
   Array<ScalarT> vals(1);
   vals[0] = 1;
-  for(OrdinalT gRow=0; gRow < mi.num_global_rows; ++gRow) {
+  for(GlobalOrdinalT gRow=0; gRow < mi.num_global_rows; ++gRow) {
     gCols[0] = gRow;
     matrix->sumIntoGlobalValues(gRow,gCols,vals);
   }
