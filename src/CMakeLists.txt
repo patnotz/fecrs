@@ -32,7 +32,6 @@ add_executable(fecrs main.cpp)
 
 SET(FECRS_LIBRARIES
     #fecrsLib
-    stk_io
     stk_mesh_base
     stk_mesh_fem
     stk_util_diag
