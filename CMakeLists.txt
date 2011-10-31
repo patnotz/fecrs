@@ -1,5 +1,6 @@
-
 cmake_minimum_required(VERSION 2.8)
+
+PROJECT(fecrs)
 
 # Error check up front
 IF (NOT DEFINED FECRS_TRILINOS_DIR)
@@ -38,8 +39,6 @@ add_definitions("-g -O2")
 #  NOTE: PROJECT command checks for compilers, so this statement
 #        is moved AFTER setting CMAKE_CXX_COMPILER opton
 
-PROJECT(Cj)
-
 # MPI check -- defaults to TRUE
 MESSAGE("-- Checking if MPI is enabled in Trilinos:")
 LIST(FIND Trilinos_TPL_LIST MPI MPI_List_ID)
@@ -52,28 +51,82 @@ ELSE()
   SET(FECRS_MPI FALSE)
 ENDIF()
 
-# set optional dependency on Ioss, for I/O via stk_io
-MESSAGE("-- Looking for Ioss:")
-LIST(FIND Trilinos_PACKAGE_LIST Trios Trios_List_ID)
-IF (Trios_List_ID GREATER -1)
-  ADD_DEFINITIONS(-DFECRS_IOSS)
-  MESSAGE("-- Looking for Ioss: -- found, compiling with -DFECRS_IOSS")
-  SET(FECRS_IOSS TRUE)
-ELSE()
-  MESSAGE("-- Looking for Ioss: -- not found.")
-  SET(FECRS_IOSS FALSE)
-ENDIF()
+################################################################################
+            
+# GTest - http://code.google.com/p/googletest/
+#                       
+################################################################################
+add_subdirectory(gtest-1.6.0)
+enable_testing(true)
+                                                                                             
+################################################################################
+# Boost
+################################################################################
+set(Boost_ADDITIONAL_VERSIONS 1.47 1.47.0)
+find_package(Boost 1.47 REQUIRED COMPONENTS filesystem system program_options)
+
+
 
 ################################################################################
-# GTest
-# See: http://code.google.com/p/googletest/
+# fecrs
 ################################################################################
-set(GTEST_ROOT /usr/local/gtest-1.5.0)
-find_package(GTest)
-if(GTEST_FOUND)
-   enable_testing(true)
-endif()
+include_directories (
+    src
+    ${Boost_INCLUDE_DIRS}
+)
 
+link_directories (
+)
 
-add_subdirectory(src)
+SET(SOURCES 
+  # e.g., src/foo.cpp
+)
+
+SET(HEADERS
+  # e.g., src/foo.hpp
+  src/typeinfo.hpp
+)
+
+set(FECRS_TRILINOS_LIBS ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
+
+include_directories (
+    ${Trilinos_INCLUDE_DIRS}
+    ${Trilinos_TPL_INCLUDE_DIRS}
+    src
+)
+
+link_directories (
+    ${Trilinos_LIBRARY_DIRS} 
+    ${Trilinos_TPL_LIBRARY_DIRS} 
+)
+
+#add_library(fecrsLib ${SOURCES} ${HEADERS})
+
+# Now build executables from this library, tailored main()s, and Trilinos
+
+add_executable(fecrs src/main.cpp)
+
+SET(FECRS_LIBRARIES
+    #fecrsLib
+    stk_mesh_base
+    stk_mesh_fem
+    stk_util_diag
+    stk_util_env
+    stk_util_parallel
+    stk_util_util
+    teuchos
+    epetra
+    shards
+    tpetra
+    curl hdf5 hdf5_hl exodus netcdf z blas
+)
+
+target_link_libraries(fecrs ${FECRS_LIBRARIES} ${Boost_LIBRARIES}) 
+
+include_directories(src ${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+add_executable(fecrs_unit_tests src/fecrs_unit_tests.cpp)
+target_link_libraries(fecrs_unit_tests ${FECRS_LIBRARY})
+target_link_libraries(fecrs_unit_tests gtest gtest_main)
+add_test(fecrs_UnitTests fecrs_unit_tests)
+
 
