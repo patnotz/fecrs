@@ -9,5 +9,5 @@ cmake \
  -D CMAKE_CXX_COMPILER:STRING=/usr/local/bin/mpic++ \
  -D CMAKE_C_COMPILER:STRING=/usr/local/bin/mpicc \
  -D CMAKE_EXE_LINKER_FLAGS:STRING="-L/opt/local/lib" \
- -D FECRS_TRILINOS_DIR:FILEPATH=/usr/local/trilinos-master/mpi/opt \
+ -D TRILINOS_PATH:FILEPATH=/usr/local/trilinos-master/mpi/opt \
  $EXTRA_ARGS ..

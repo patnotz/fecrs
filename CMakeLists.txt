@@ -2,35 +2,36 @@ cmake_minimum_required(VERSION 2.8)
 
 PROJECT(fecrs)
 
-# Error check up front
-IF (NOT DEFINED FECRS_TRILINOS_DIR)
-  MESSAGE(FATAL_ERROR "\nFECRS Error: cmake must define FECRS_TRILINOS_DIR:
-  (-D FECRS_TRILINOS_DIR:FILEPATH=<trilinos_install_prefix>)!")
-ENDIF()
-
-# Get Trilinos as one entity
-FIND_PACKAGE(Trilinos PATHS ${FECRS_TRILINOS_DIR}/lib/cmake/Trilinos)
-
+FIND_PACKAGE(Trilinos PATHS ${TRILINOS_PATH}/lib/cmake/Trilinos ${TRILINOS_PATH})
 IF(NOT Trilinos_FOUND)
   MESSAGE(FATAL_ERROR "Could not find Trilinos!")
 ENDIF()
+MESSAGE("   Found Trilinos!  Here are the details: ")
+MESSAGE("      Trilinos_DIR = ${Trilinos_DIR}")
+MESSAGE("      Trilinos_VERSION = ${Trilinos_VERSION}")
+#MESSAGE("   Trilinos_PACKAGE_LIST = ${Trilinos_PACKAGE_LIST}")
+#MESSAGE("   Trilinos_LIBRARIES = ${Trilinos_LIBRARIES}")
+#MESSAGE("   Trilinos_INCLUDE_DIRS = ${Trilinos_INCLUDE_DIRS}")
+#MESSAGE("   Trilinos_LIBRARY_DIRS = ${Trilinos_LIBRARY_DIRS}")
+#MESSAGE("   Trilinos_TPL_LIST = ${Trilinos_TPL_LIST}")
+#MESSAGE("   Trilinos_TPL_INCLUDE_DIRS = ${Trilinos_TPL_INCLUDE_DIRS}")
+#MESSAGE("   Trilinos_TPL_LIBRARIES = ${Trilinos_TPL_LIBRARIES}")
+#MESSAGE("   Trilinos_TPL_LIBRARY_DIRS = ${Trilinos_TPL_LIBRARY_DIRS}")
+#MESSAGE("   Trilinos_BUILD_SHARED_LIBS = ${Trilinos_BUILD_SHARED_LIBS}")
+MESSAGE("   End of Trilinos details")
 
-MESSAGE("\nFound Trilinos!  Here are the details: ")
-MESSAGE("   Trilinos_DIR = ${Trilinos_DIR}")
-MESSAGE("   Trilinos_VERSION = ${Trilinos_VERSION}")
-MESSAGE("   Trilinos_PACKAGE_LIST = ${Trilinos_PACKAGE_LIST}")
-MESSAGE("   Trilinos_LIBRARIES = ${Trilinos_LIBRARIES}")
-MESSAGE("   Trilinos_INCLUDE_DIRS = ${Trilinos_INCLUDE_DIRS}")
-MESSAGE("   Trilinos_LIBRARY_DIRS = ${Trilinos_LIBRARY_DIRS}")
-MESSAGE("   Trilinos_TPL_LIST = ${Trilinos_TPL_LIST}")
-MESSAGE("   Trilinos_TPL_INCLUDE_DIRS = ${Trilinos_TPL_INCLUDE_DIRS}")
-MESSAGE("   Trilinos_TPL_LIBRARIES = ${Trilinos_TPL_LIBRARIES}")
-MESSAGE("   Trilinos_TPL_LIBRARY_DIRS = ${Trilinos_TPL_LIBRARY_DIRS}")
-MESSAGE("   Trilinos_BUILD_SHARED_LIBS = ${Trilinos_BUILD_SHARED_LIBS}")
-MESSAGE("End of Trilinos details\n")
+IF(NOT CMAKE_CXX_COMPILER)
+  MESSAGE("Setting CXX compiler.")
+  SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER})
+ENDIF()
 
-SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
-SET(CMAKE_C_COMPILER ${Trilinos_C_COMPILER} )
+# If you haven't already set the C compiler, use the same compiler
+# that was used to build Trilinos on your machine.  You do _not_ 
+# need to edit this line.
+IF(NOT CMAKE_C_COMPILER)
+  MESSAGE("Setting C compiler.")
+  SET(CMAKE_C_COMPILER ${Trilinos_C_COMPILER})
+ENDIF()
 
 #add_definitions("-g -O2 -std=c++0x")
 add_definitions("-g -O2")
